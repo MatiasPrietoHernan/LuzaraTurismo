@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -20,17 +20,66 @@ import { cn } from "@/lib/utils"
 import * as LucideDynamic from "lucide-react"
 import { Bus, Hotel } from "lucide-react"
 
+interface DeparturePoint {
+  _id: string
+  name: string
+  city: string
+  address?: string
+}
+
+interface ClientPackage {
+  _id: string
+  title: string
+  mainImage?: string
+  gallery?: string[]
+  badge?: string
+  price: number
+  priceFrom?: number
+  description?: string
+  destination?: string
+  nights?: number
+  departureDate?: string
+  formattedDepartureDate?: string
+  availableDates?: number[]
+  services?: { icon: string; text: string }[]
+  information?: string[]
+  hotel?: {
+    name: string
+    roomType: string
+    zone?: string
+    location?: string
+    image?: string
+  }
+  departurePoints?: DeparturePoint[]
+}
+
 interface Props {
-  pkg: any
+  pkg: ClientPackage
 }
 
 export default function ClientPackageView({ pkg }: Props) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const departureMonth = useMemo(() => {
+    if (!pkg.departureDate) return undefined
+    const date = new Date(pkg.departureDate)
+    if (Number.isNaN(date.getTime())) return undefined
+    return new Date(date.getFullYear(), date.getMonth(), 1)
+  }, [pkg.departureDate])
+  const defaultSelectedDate = useMemo(() => {
+    if (!departureMonth || !pkg.availableDates?.length) return undefined
+    const firstDay = pkg.availableDates[0]
+    return new Date(departureMonth.getFullYear(), departureMonth.getMonth(), firstDay)
+  }, [departureMonth, pkg.availableDates])
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(defaultSelectedDate)
   const { addItem } = useCart()
   const router = useRouter()
 
-  // Crear galería efectiva: usar mainImage si no hay gallery, o gallery si existe
+  useEffect(() => {
+    setSelectedDate(defaultSelectedDate)
+  }, [defaultSelectedDate])
+
+  const availableDays = useMemo(() => new Set(pkg.availableDates || []), [pkg.availableDates])
+
   const effectiveGallery = pkg.gallery && pkg.gallery.length > 0 
     ? pkg.gallery 
     : pkg.mainImage 
@@ -50,7 +99,12 @@ export default function ClientPackageView({ pkg }: Props) {
   }
 
   const isDateAvailable = (date: Date) => {
-    return pkg.availableDates.includes(date.getDate())
+    if (!departureMonth || availableDays.size === 0) return false
+    return (
+      date.getMonth() === departureMonth.getMonth() &&
+      date.getFullYear() === departureMonth.getFullYear() &&
+      availableDays.has(date.getDate())
+    )
   }
 
   return (
@@ -75,16 +129,20 @@ export default function ClientPackageView({ pkg }: Props) {
                     {pkg.nights} noches
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-[#4A9B9B]" />
-                  <span className="text-lg font-medium">
-                    {pkg.destination}
-                  </span>
+                {pkg.destination && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-[#4A9B9B]" />
+                    <span className="text-lg font-medium">
+                      {pkg.destination}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {pkg.formattedDepartureDate && (
+                <div className="text-slate-600 mt-1 font-medium">
+                  Salida: {pkg.formattedDepartureDate}
                 </div>
-              </div>
-              <div className="text-slate-600 mt-1 font-medium">
-                Salida: {pkg.departureDate}
-              </div>
+              )}
             </div>
 
             {/* Image Gallery */}
@@ -163,6 +221,32 @@ export default function ClientPackageView({ pkg }: Props) {
               </Card>
             )}
 
+            {/* Available Dates */}
+            {pkg.availableDates && pkg.availableDates.length > 0 && (
+              <Card className="border-0 shadow-md">
+                <CardContent className="p-6">
+                  <h2 className="text-2xl font-bold text-[#2C3E5C] mb-4">
+                    Fechas disponibles
+                  </h2>
+                  <p className="text-sm text-slate-500 mb-4">
+                    {departureMonth
+                      ? `Salidas confirmadas para el mes de ${departureMonth.toLocaleDateString("es-AR", { month: "long", year: "numeric" })}`
+                      : "Salidas confirmadas para este paquete"}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {pkg.availableDates.map((day) => (
+                      <span
+                        key={day}
+                        className="px-3 py-1 rounded-full bg-[#4A9B9B]/10 text-[#2C3E5C] font-semibold text-sm"
+                      >
+                        Día {day}
+                      </span>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Services Section */}
             {pkg.services && pkg.services.length > 0 && (
               <Card className="border-0 shadow-md">
@@ -211,6 +295,33 @@ export default function ClientPackageView({ pkg }: Props) {
               </Card>
             )}
 
+            {/* Departure Points */}
+            {pkg.departurePoints && pkg.departurePoints.length > 0 && (
+              <Card className="border-0 shadow-md">
+                <CardContent className="p-6">
+                  <h2 className="text-2xl font-bold text-[#2C3E5C] mb-4">
+                    Puntos de salida
+                  </h2>
+                  <div className="space-y-4">
+                    {pkg.departurePoints.map((point) => (
+                      <div key={point._id} className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[#4A9B9B]/10 flex items-center justify-center flex-shrink-0">
+                          <MapPin className="w-5 h-5 text-[#4A9B9B]" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-[#2C3E5C]">{point.city}</p>
+                          <p className="text-sm text-slate-600">{point.name}</p>
+                          {point.address && (
+                            <p className="text-sm text-slate-500">{point.address}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Hotel Section */}
             {pkg.hotel && (
               <Card className="border-0 shadow-md">
@@ -219,40 +330,42 @@ export default function ClientPackageView({ pkg }: Props) {
                     Hoteles
                   </h2>
                   <div className="flex flex-col md:flex-row gap-4">
-                    <div className="relative w-full md:w-48 h-48 rounded-lg overflow-hidden flex-shrink-0">
-                      <Image
-                        src={pkg.hotel.image || "/placeholder.svg"}
-                        alt={pkg.hotel.name}
-                        fill
-                        className="object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.src = "/placeholder.svg"
-                        }}
-                      />
+                    <div className="relative w-full md:w-48 h-48 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100">
+                      {pkg.hotel.image ? (
+                        <Image
+                          src={pkg.hotel.image}
+                          alt={pkg.hotel.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
+                          Sin imagen
+                        </div>
+                      )}
                     </div>
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-start gap-2">
-                        <Hotel className="w-5 h-5 text-[#4A9B9B] mt-1 flex-shrink-0" />
-                        <div>
-                          <h3 className="font-bold text-lg text-[#2C3E5C]">
-                            {pkg.hotel.name}
-                          </h3>
-                          <div className="flex items-center gap-2 text-[#4A9B9B] mt-1">
-                            <Bed className="w-4 h-4" />
-                            <span className="text-sm font-medium">{pkg.hotel.roomType}</span>
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-start gap-2">
+                          <Hotel className="w-5 h-5 text-[#4A9B9B] mt-1 flex-shrink-0" />
+                          <div>
+                            <h3 className="font-bold text-lg text-[#2C3E5C]">
+                              {pkg.hotel.name}
+                            </h3>
+                            <div className="flex items-center gap-2 text-[#4A9B9B] mt-1">
+                              <Bed className="w-4 h-4" />
+                              <span className="text-sm font-medium">{pkg.hotel.roomType}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-5 h-5 text-slate-500 flex-shrink-0" />
+                          <div>
+                            <p className="font-medium text-slate-700">{pkg.hotel.zone}</p>
+                            <p className="text-sm text-slate-600">{pkg.hotel.location}</p>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-5 h-5 text-slate-500 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium text-slate-700">{pkg.hotel.zone}</p>
-                          <p className="text-sm text-slate-600">{pkg.hotel.location}</p>
-                        </div>
-                      </div>
                     </div>
-                  </div>
                 </CardContent>
               </Card>
             )}
@@ -278,13 +391,15 @@ export default function ClientPackageView({ pkg }: Props) {
                 {/* Calendar */}
                 <CardContent className="p-4">
                   <div className="space-y-4">
-                    <div className="flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-[#2C3E5C] mb-2">
-                          Diciembre 2025
+                    {departureMonth && (
+                      <div className="flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-[#2C3E5C] mb-2 capitalize">
+                            {departureMonth.toLocaleDateString("es-AR", { month: "long", year: "numeric" })}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                     
                     <Calendar
                       mode="single"
@@ -295,7 +410,7 @@ export default function ClientPackageView({ pkg }: Props) {
                         }
                       }}
                       disabled={(date) => !isDateAvailable(date)}
-                      month={new Date(2025, 11, 1)}
+                      month={departureMonth}
                       className="rounded-md border-0"
                     />
 

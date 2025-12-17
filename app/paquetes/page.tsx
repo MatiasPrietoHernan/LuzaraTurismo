@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent } from "@/components/ui/card"
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { MapPin, Clock, ArrowRight, Filter, X } from 'lucide-react'
+import { MapPin, Clock, ArrowRight, Filter, X, Navigation } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
@@ -26,21 +26,19 @@ interface Package {
   description?: string
   destination?: string
   nights?: number
+  departurePoints?: Array<string | { _id: string }>
 }
 
-const DESTINATIONS = [
-  "Todos los destinos",
-  "Mar del Plata, Argentina",
-  "Camboriú, Brasil",
-  "Cataratas del Iguazú, Argentina",
-  "Patagonia Chilena, Chile",
-  "Buenos Aires, Argentina",
-  "Mendoza, Argentina",
-  "Bariloche, Argentina",
-  "Ushuaia, Argentina",
-  "Córdoba, Argentina",
-  "Puerto Madryn, Argentina"
-]
+interface DeparturePoint {
+  _id: string
+  name: string
+  city: string
+  address?: string
+}
+
+interface PackageCardProps extends Package {
+  departurePointNames?: string[]
+}
 
 const DURATIONS = [
   { label: "Cualquier duración", value: "all" },
@@ -62,11 +60,13 @@ export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([])
   const [filteredPackages, setFilteredPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)
+  const [departurePoints, setDeparturePoints] = useState<DeparturePoint[]>([])
   
   // Filters
-  const [destination, setDestination] = useState(searchParams.get('destination') || "Todos los destinos")
+  const [destination, setDestination] = useState(searchParams.get('destination') || "all")
   const [duration, setDuration] = useState(searchParams.get('duration') || "all")
   const [priceRange, setPriceRange] = useState(searchParams.get('price') || "all")
+  const [departurePoint, setDeparturePoint] = useState(searchParams.get('departurePoint') || "all")
   const [sortBy, setSortBy] = useState("relevant")
 
   // Load packages
@@ -80,12 +80,37 @@ export default function PackagesPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    fetch('/api/departure-points')
+      .then(res => res.json())
+      .then(data => setDeparturePoints(data))
+      .catch((err) => console.error('Error fetching departure points', err))
+  }, [])
+
+  const destinationOptions = useMemo(() => {
+    const set = new Set<string>()
+    packages.forEach((pkg) => {
+      if (pkg.destination) {
+        set.add(pkg.destination)
+      }
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [packages])
+
+  const departurePointMap = useMemo(() => {
+    const map = new Map<string, DeparturePoint>()
+    departurePoints.forEach((point) => {
+      map.set(point._id, point)
+    })
+    return map
+  }, [departurePoints])
+
   // Apply filters
   useEffect(() => {
     let filtered = [...packages]
 
     // Filter by destination
-    if (destination && destination !== "Todos los destinos") {
+    if (destination && destination !== "all") {
       filtered = filtered.filter(pkg => pkg.destination === destination)
     }
 
@@ -115,6 +140,18 @@ export default function PackagesPage() {
       }
     }
 
+    // Filter by departure point
+    if (departurePoint && departurePoint !== "all") {
+      filtered = filtered.filter(pkg => 
+        pkg.departurePoints && pkg.departurePoints.some(point => {
+          if (typeof point === 'string') {
+            return point === departurePoint
+          }
+          return point?._id === departurePoint
+        })
+      )
+    }
+
     // Sort
     switch (sortBy) {
       case 'price-asc':
@@ -132,16 +169,21 @@ export default function PackagesPage() {
     }
 
     setFilteredPackages(filtered)
-  }, [packages, destination, duration, priceRange, sortBy])
+  }, [packages, destination, duration, priceRange, departurePoint, sortBy])
 
   const clearFilters = () => {
-    setDestination("Todos los destinos")
+    setDestination("all")
     setDuration("all")
     setPriceRange("all")
+    setDeparturePoint("all")
     setSortBy("relevant")
   }
 
-  const hasActiveFilters = destination !== "Todos los destinos" || (duration !== "all" && duration) || (priceRange !== "all" && priceRange)
+  const hasActiveFilters = 
+    (destination !== "all" && destination !== "") || 
+    (duration !== "all" && duration !== "") || 
+    (priceRange !== "all" && priceRange !== "") ||
+    (departurePoint !== "all" && departurePoint !== "")
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -192,12 +234,33 @@ export default function PackagesPage() {
                     </label>
                     <Select value={destination} onValueChange={setDestination}>
                       <SelectTrigger className="border-2 border-slate-200 focus:border-[#4A9B9B]">
-                        <SelectValue />
+                        <SelectValue placeholder="Todos los destinos" />
                       </SelectTrigger>
                       <SelectContent>
-                        {DESTINATIONS.map((dest) => (
+                        <SelectItem value="all">Todos los destinos</SelectItem>
+                        {destinationOptions.map((dest) => (
                           <SelectItem key={dest} value={dest}>
                             {dest}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Departure Point Filter */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                      Punto de salida
+                    </label>
+                    <Select value={departurePoint} onValueChange={setDeparturePoint}>
+                      <SelectTrigger className="border-2 border-slate-200 focus:border-[#4A9B9B]">
+                        <SelectValue placeholder="Todos los puntos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los puntos</SelectItem>
+                        {departurePoints.map((point) => (
+                          <SelectItem key={point._id} value={point._id}>
+                            {point.city} · {point.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -300,9 +363,25 @@ export default function PackagesPage() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredPackages.map((pkg) => (
-                  <PackageCard key={pkg._id} {...pkg} />
-                ))}
+                {filteredPackages.map((pkg) => {
+                  const departurePointNames = Array.from(new Set(
+                    (pkg.departurePoints || [])
+                      .map((pointRef) => {
+                        const pointId = typeof pointRef === 'string' ? pointRef : pointRef?._id
+                        if (!pointId) return null
+                        return departurePointMap.get(pointId)
+                      })
+                      .filter((point): point is DeparturePoint => Boolean(point))
+                      .map((point) => point.city || point.name)
+                  ))
+                  return (
+                    <PackageCard 
+                      key={pkg._id} 
+                      {...pkg} 
+                      departurePointNames={departurePointNames} 
+                    />
+                  )
+                })}
               </div>
             )}
           </div>
@@ -323,7 +402,12 @@ function PackageCard({
   description,
   destination,
   nights,
-}: Package) {
+  departurePointNames = [],
+}: PackageCardProps) {
+  const departureSummary = departurePointNames.slice(0, 2).join(", ")
+  const extraDepartures = departurePointNames.length > 2 
+    ? ` +${departurePointNames.length - 2} más`
+    : ""
   return (
     <Link href={`/package/${_id}`} className="block group">
       <Card className="overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-white hover:-translate-y-1">
@@ -375,6 +459,15 @@ function PackageCard({
               <div className="flex items-center gap-2 text-slate-600">
                 <Clock className="w-4 h-4 text-[#4A9B9B] flex-shrink-0" />
                 <span className="text-sm font-medium">{nights} {nights === 1 ? 'noche' : 'noches'}</span>
+              </div>
+            )}
+
+            {departurePointNames.length > 0 && (
+              <div className="flex items-center gap-2 text-slate-600">
+                <Navigation className="w-4 h-4 text-[#4A9B9B] flex-shrink-0" />
+                <span className="text-sm font-medium truncate">
+                  Salidas: {departureSummary}{extraDepartures}
+                </span>
               </div>
             )}
           </div>

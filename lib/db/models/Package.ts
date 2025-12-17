@@ -19,6 +19,7 @@ export interface IPackage extends Document {
     image: string;
   };
   availableDates: number[];
+  departurePoints: Schema.Types.ObjectId[]; // 👈 Cambiado de string[] a ObjectId[]
   badge?: string;
   description?: string;
   isPromotion?: boolean;
@@ -27,7 +28,6 @@ export interface IPackage extends Document {
   views: number;
   clicks: number;
 }
-
 
 const PackageSchema = new Schema<IPackage>({
   title: { type: String, required: true },
@@ -48,6 +48,7 @@ const PackageSchema = new Schema<IPackage>({
     image: { type: String }
   },
   availableDates: [{ type: Number }],
+  departurePoints: [{ type: Schema.Types.ObjectId, ref: 'DeparturePoint' }], // 👈 CORREGIDO
   badge: { type: String },
   description: { type: String },
   isPromotion: { type: Boolean, default: false },
@@ -56,7 +57,6 @@ const PackageSchema = new Schema<IPackage>({
   views: { type: Number, default: 0 },
   clicks: { type: Number, default: 0 }
 }, { timestamps: true });
-
 
 const Package = models.Package || model<IPackage>('Package', PackageSchema);
 

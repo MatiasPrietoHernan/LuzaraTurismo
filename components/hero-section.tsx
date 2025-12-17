@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { MapPin, Calendar as CalendarIcon, Users, Compass, ChevronDown, Plus, Minus } from 'lucide-react'
 import {
@@ -18,61 +18,24 @@ import {
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
 
-const ORIGINS = [
-  "TUCUMAN, ARGENTINA",
-  "SALTA, ARGENTINA",
-  "JUJUY, ARGENTINA"
-]
+interface DeparturePoint {
+  _id: string
+  name: string
+  city: string
+}
 
-const DESTINATIONS = [
-  "Mar del Plata, Argentina",
-  "Camboriú, Brasil",
-  "Cataratas del Iguazú, Argentina",
-  "Patagonia Chilena, Chile",
-  "Buenos Aires, Argentina",
-  "Mendoza, Argentina",
-  "Bariloche, Argentina",
-  "Ushuaia, Argentina",
-  "Córdoba, Argentina",
-  "Puerto Madryn, Argentina"
-]
-
-// Available months and days based on selection
-const MONTHS = [
-  { value: "01", label: "Enero" },
-  { value: "02", label: "Febrero" },
-  { value: "03", label: "Marzo" },
-  { value: "04", label: "Abril" },
-  { value: "05", label: "Mayo" },
-  { value: "06", label: "Junio" },
-  { value: "07", label: "Julio" },
-  { value: "08", label: "Agosto" },
-  { value: "09", label: "Septiembre" },
-  { value: "10", label: "Octubre" },
-  { value: "11", label: "Noviembre" },
-  { value: "12", label: "Diciembre" },
-]
-
-// Simulated available dates based on origin, destination and month
-const getAvailableDates = (origin: string, destination: string, month: string): number[] => {
-  if (!origin || !destination || !month) return []
-  
-  // Simulate different availability patterns based on combinations
-  const hash = (origin + destination + month).length % 3
-  
-  if (hash === 0) {
-    // Pattern 1: Mostly weekends and some mid-week days
-    return [5, 6, 7, 12, 13, 14, 19, 20, 21, 26, 27, 28]
-  } else if (hash === 1) {
-    // Pattern 2: Regular departures every few days
-    return [1, 4, 7, 10, 13, 16, 19, 22, 25, 28]
-  } else {
-    // Pattern 3: More flexible dates
-    return [2, 3, 5, 8, 9, 11, 15, 16, 17, 18, 22, 23, 24, 29, 30]
-  }
+interface PackageSummary {
+  _id: string
+  destination?: string
+  departureDate?: string
+  availableDates?: number[]
+  departurePoints?: string[]
 }
 
 export function HeroSection() {
+  const [packages, setPackages] = useState<PackageSummary[]>([])
+  const [departurePoints, setDeparturePoints] = useState<DeparturePoint[]>([])
+  const [filtersLoading, setFiltersLoading] = useState(true)
   const [origin, setOrigin] = useState("")
   const [destination, setDestination] = useState("")
   const [month, setMonth] = useState("")
@@ -83,43 +46,143 @@ export function HeroSection() {
   const [peoplePopoverOpen, setPeoplePopoverOpen] = useState(false)
   const [calendarOpen, setCalendarOpen] = useState(false)
 
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [packagesRes, pointsRes] = await Promise.all([
+          fetch('/api/packages'),
+          fetch('/api/departure-points')
+        ])
+        const [packagesData, pointsData] = await Promise.all([
+          packagesRes.json(),
+          pointsRes.json()
+        ])
+        setPackages(packagesData)
+        setDeparturePoints(pointsData)
+      } catch (error) {
+        console.error('Error loading packages filters:', error)
+      } finally {
+        setFiltersLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  const destinationOptions = useMemo(() => {
+    const set = new Set<string>()
+    packages.forEach((pkg) => {
+      if (pkg.destination) {
+        set.add(pkg.destination)
+      }
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [packages])
+
+  const matchingPackages = useMemo(() => {
+    return packages.filter((pkg) => {
+      if (destination && pkg.destination !== destination) {
+        return false
+      }
+      if (origin) {
+        if (!pkg.departurePoints || pkg.departurePoints.length === 0) {
+          return false
+        }
+        return pkg.departurePoints.some((pointId) => pointId === origin)
+      }
+      return true
+    })
+  }, [packages, destination, origin])
+
+  const monthOptions = useMemo(() => {
+    const map = new Map<string, { value: string; label: string; year: number; monthIndex: number }>()
+    matchingPackages.forEach((pkg) => {
+      if (!pkg.departureDate) return
+      const departureDate = new Date(pkg.departureDate)
+      if (Number.isNaN(departureDate.getTime())) return
+      const key = `${departureDate.getFullYear()}-${departureDate.getMonth()}`
+      if (!map.has(key)) {
+        map.set(key, {
+          value: key,
+          label: departureDate.toLocaleDateString("es-AR", { month: "long", year: "numeric" }),
+          year: departureDate.getFullYear(),
+          monthIndex: departureDate.getMonth(),
+        })
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.year === b.year) {
+        return a.monthIndex - b.monthIndex
+      }
+      return a.year - b.year
+    })
+  }, [matchingPackages])
+
+  const selectedMonthDate = useMemo(() => {
+    if (!month) return undefined
+    const [yearStr, monthIndexStr] = month.split('-')
+    const year = Number(yearStr)
+    const monthIndex = Number(monthIndexStr)
+    if (Number.isNaN(year) || Number.isNaN(monthIndex)) return undefined
+    return new Date(year, monthIndex, 1)
+  }, [month])
+
+  const availableDatesForMonth = useMemo(() => {
+    if (!selectedMonthDate) return []
+    const days = new Set<number>()
+    matchingPackages.forEach((pkg) => {
+      if (!pkg.departureDate) return
+      const departureDate = new Date(pkg.departureDate)
+      if (Number.isNaN(departureDate.getTime())) return
+      if (
+        departureDate.getFullYear() !== selectedMonthDate.getFullYear() ||
+        departureDate.getMonth() !== selectedMonthDate.getMonth()
+      ) {
+        return
+      }
+
+      if (pkg.availableDates && pkg.availableDates.length > 0) {
+        pkg.availableDates.forEach((day) => days.add(day))
+      } else {
+        days.add(departureDate.getDate())
+      }
+    })
+
+    return Array.from(days)
+      .sort((a, b) => a - b)
+      .map((day) => new Date(selectedMonthDate.getFullYear(), selectedMonthDate.getMonth(), day))
+  }, [matchingPackages, selectedMonthDate])
+
+  const availableDaySet = useMemo(() => {
+    return new Set(availableDatesForMonth.map((date) => date.getDate()))
+  }, [availableDatesForMonth])
+
   const handleOriginChange = (value: string) => {
-    setOrigin(value)
-    // Reset dependent fields
-    setDestination("")
+    const normalizedValue = value === 'all' ? '' : value
+    setOrigin(normalizedValue)
     setMonth("")
     setSelectedDate(undefined)
   }
 
   const handleDestinationChange = (value: string) => {
-    setDestination(value)
-    // Reset dependent fields
+    const normalizedValue = value === 'all' ? '' : value
+    setDestination(normalizedValue)
     setMonth("")
     setSelectedDate(undefined)
   }
 
   const handleMonthChange = (value: string) => {
-    setMonth(value)
-    // Reset day selection
+    const normalizedValue = value === 'all' ? '' : value
+    setMonth(normalizedValue)
     setSelectedDate(undefined)
   }
 
-  const getAvailableDatesForCalendar = () => {
-    if (!origin || !destination || !month) return []
-    
-    const availableDays = getAvailableDates(origin, destination, month)
-    const year = new Date().getFullYear()
-    const monthNum = parseInt(month) - 1
-    
-    return availableDays.map(day => new Date(year, monthNum, day))
-  }
-
   const isDateAvailable = (date: Date) => {
-    const availableDates = getAvailableDatesForCalendar()
-    return availableDates.some(availableDate => 
-      availableDate.getDate() === date.getDate() &&
-      availableDate.getMonth() === date.getMonth() &&
-      availableDate.getFullYear() === date.getFullYear()
+    if (!selectedMonthDate || availableDaySet.size === 0) return false
+    return (
+      date.getMonth() === selectedMonthDate.getMonth() &&
+      date.getFullYear() === selectedMonthDate.getFullYear() &&
+      availableDaySet.has(date.getDate())
     )
   }
 
@@ -151,8 +214,17 @@ export function HeroSection() {
       params.set('destination', destination)
     }
     
+    if (origin) {
+      params.set('departurePoint', origin)
+    }
+
+    if (selectedDate) {
+      params.set('date', selectedDate.toISOString())
+    }
+    
     // Redirect to packages page with filters
-    window.location.href = `/paquetes?${params.toString()}`
+    const query = params.toString()
+    window.location.href = query ? `/paquetes?${query}` : '/paquetes'
   }
 
   return (
@@ -195,14 +267,24 @@ export function HeroSection() {
                 </label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" />
-                  <Select value={origin} onValueChange={handleOriginChange}>
-                    <SelectTrigger className="pl-10 h-12 border-2 border-slate-200 rounded-lg focus:border-[#4A9B9B] focus:ring-2 focus:ring-[#4A9B9B]/20 transition-all duration-200 bg-white hover:border-slate-300">
-                      <SelectValue placeholder="Seleccionar origen" />
+                  <Select 
+                    value={origin} 
+                    onValueChange={handleOriginChange}
+                    disabled={filtersLoading || departurePoints.length === 0}
+                  >
+                    <SelectTrigger className={cn(
+                      "pl-10 h-12 border-2 border-slate-200 rounded-lg focus:border-[#4A9B9B] focus:ring-2 focus:ring-[#4A9B9B]/20 transition-all duration-200 bg-white",
+                      filtersLoading ? "cursor-not-allowed opacity-50" : "hover:border-slate-300"
+                    )}>
+                      <SelectValue placeholder={filtersLoading ? "Cargando orígenes..." : "Seleccionar origen"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {ORIGINS.map((orig) => (
-                        <SelectItem key={orig} value={orig} className="text-sm">
-                          {orig}
+                      <SelectItem value="all" className="text-sm">
+                        Cualquier origen
+                      </SelectItem>
+                      {departurePoints.map((point) => (
+                        <SelectItem key={point._id} value={point._id} className="text-sm">
+                          {point.city} · {point.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -220,16 +302,17 @@ export function HeroSection() {
                   <Select 
                     value={destination} 
                     onValueChange={handleDestinationChange}
-                    disabled={!origin}
+                    disabled={filtersLoading || destinationOptions.length === 0}
                   >
                     <SelectTrigger className={cn(
                       "pl-10 h-12 border-2 border-slate-200 rounded-lg focus:border-[#4A9B9B] focus:ring-2 focus:ring-[#4A9B9B]/20 transition-all duration-200 bg-white",
-                      !origin ? "cursor-not-allowed opacity-50" : "hover:border-slate-300"
+                      filtersLoading ? "cursor-not-allowed opacity-50" : "hover:border-slate-300"
                     )}>
-                      <SelectValue placeholder="Seleccionar destino" />
+                      <SelectValue placeholder={filtersLoading ? "Cargando destinos..." : "Seleccionar destino"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {DESTINATIONS.map((dest) => (
+                      <SelectItem value="all" className="text-sm">Cualquier destino</SelectItem>
+                      {destinationOptions.map((dest) => (
                         <SelectItem key={dest} value={dest} className="text-sm">
                           {dest}
                         </SelectItem>
@@ -251,16 +334,17 @@ export function HeroSection() {
                     <Select 
                       value={month} 
                       onValueChange={handleMonthChange}
-                      disabled={!origin || !destination}
+                      disabled={filtersLoading || monthOptions.length === 0}
                     >
                       <SelectTrigger className={cn(
                         "pl-10 h-12 border-2 border-slate-200 rounded-lg focus:border-[#4A9B9B] focus:ring-2 focus:ring-[#4A9B9B]/20 transition-all duration-200 bg-white",
-                        (!origin || !destination) ? "cursor-not-allowed opacity-50" : "hover:border-slate-300"
+                        (filtersLoading || monthOptions.length === 0) ? "cursor-not-allowed opacity-50" : "hover:border-slate-300"
                       )}>
-                        <SelectValue placeholder="Mes" />
+                        <SelectValue placeholder={filtersLoading ? "Cargando meses..." : "Mes"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {MONTHS.map((m) => (
+                        <SelectItem value="all">Cualquier mes</SelectItem>
+                        {monthOptions.map((m) => (
                           <SelectItem key={m.value} value={m.value}>
                             {m.label}
                           </SelectItem>
@@ -277,9 +361,9 @@ export function HeroSection() {
                         className={cn(
                           "flex-1 h-12 justify-start text-left font-normal border-2 border-slate-200 rounded-lg focus:border-[#4A9B9B] focus:ring-2 focus:ring-[#4A9B9B]/20 transition-all duration-200 bg-white",
                           !selectedDate && "text-slate-400",
-                          (!origin || !destination || !month) ? "cursor-not-allowed opacity-50" : "hover:border-slate-300 hover:bg-white"
+                          (!month || availableDatesForMonth.length === 0) ? "cursor-not-allowed opacity-50" : "hover:border-slate-300 hover:bg-white"
                         )}
-                        disabled={!origin || !destination || !month}
+                        disabled={!month || availableDatesForMonth.length === 0}
                       >
                         {selectedDate ? formatDate(selectedDate) : "Día"}
                       </Button>
@@ -295,7 +379,7 @@ export function HeroSection() {
                           }
                         }}
                         disabled={(date) => !isDateAvailable(date)}
-                        month={month ? new Date(new Date().getFullYear(), parseInt(month) - 1, 1) : undefined}
+                        month={selectedMonthDate}
                         initialFocus
                       />
                       <div className="p-3 border-t bg-slate-50">

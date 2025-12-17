@@ -6,11 +6,34 @@ export async function GET(request: NextRequest) {
   await connectDB()
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type') 
-  const limit = Number(searchParams.get('limit')) || 4
+  const limit = Number(searchParams.get('limit')) || 0 // 0 = sin límite
+  const departurePoint = searchParams.get('departurePoint')
+  const destination = searchParams.get('destination')
 
-  const query = type === 'promotions' ? { isPromotion: true, isPublished: true, isActive: true } : { isPublished: true, isActive: true }
+  // Construir query base
+  const query: any = { isPublished: true, isActive: true }
   
-  const packages = await Package.find(query).limit(limit).sort({ createdAt: -1 }).lean()
+  // Filtro por tipo (promociones)
+  if (type === 'promotions') {
+    query.isPromotion = true
+  }
+  
+  // Filtro por punto de salida
+  if (departurePoint && departurePoint !== 'all') {
+    query.departurePoints = departurePoint
+  }
+  
+  // Filtro por destino
+  if (destination && destination !== 'all') {
+    query.destination = { $regex: destination, $options: 'i' } // Búsqueda case-insensitive
+  }
+  
+  const packagesQuery = Package.find(query).sort({ createdAt: -1 })
+  
+  // Aplicar límite solo si se especifica
+  const packages = limit > 0 
+    ? await packagesQuery.limit(limit).lean()
+    : await packagesQuery.lean()
 
   return NextResponse.json(packages)
 }

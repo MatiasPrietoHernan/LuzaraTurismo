@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import Link from 'next/link'
-import { ArrowLeft, Upload, Image as ImageIcon, Hotel, Bus, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Upload, Image as ImageIcon, Hotel, Bus, CheckCircle, MapPin } from 'lucide-react'
+
+interface IDeparturePoint {
+  _id: string
+  name: string
+  city: string
+  isActive: boolean
+}
 
 interface FormData {
   title: string
@@ -34,6 +41,7 @@ interface FormData {
     location: string
   }
   availableDates: number[]
+  departurePoints: string[]
 }
 
 export default function CreatePackagePage() {
@@ -54,11 +62,27 @@ export default function CreatePackagePage() {
     services: [],
     information: [],
     hotel: { name: '', roomType: '', zone: '', location: '' },
-    availableDates: []
+    availableDates: [],
+    departurePoints: []
   })
   const [loading, setLoading] = useState(false)
   const [previewMain, setPreviewMain] = useState('')
   const [previewGallery, setPreviewGallery] = useState<string[]>([])
+  const [departurePoints, setDeparturePoints] = useState<IDeparturePoint[]>([])
+
+  useEffect(() => {
+    const fetchDeparturePoints = async () => {
+      try {
+        const res = await fetch('/api/admin/departure-points')
+        const data = await res.json()
+        setDeparturePoints(data.filter((dp: IDeparturePoint) => dp.isActive))
+      } catch (error) {
+        console.error('Error loading departure points:', error)
+      }
+    }
+    
+    fetchDeparturePoints()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -80,6 +104,7 @@ export default function CreatePackagePage() {
     data.append('information', JSON.stringify(formData.information))
     data.append('hotel', JSON.stringify(formData.hotel))
     data.append('availableDates', JSON.stringify(formData.availableDates))
+    data.append('departurePoints', JSON.stringify(formData.departurePoints))
 
     if (formData.mainImage) data.append('mainImage', formData.mainImage)
     formData.gallery.forEach((file, i) => data.append(`gallery[${i}]`, file))
@@ -259,7 +284,7 @@ export default function CreatePackagePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label>Badge</Label>
+                <Label>Etiqueta</Label>
                 <Input
                   value={formData.badge}
                   onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
@@ -434,6 +459,67 @@ export default function CreatePackagePage() {
                 className="mt-2"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Puntos de Salida
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Label>Selecciona los puntos desde donde sale el paquete</Label>
+            {departurePoints.length === 0 ? (
+              <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground mb-4">
+                  No hay puntos de salida disponibles
+                </p>
+                <Link href="/admin/departure-points">
+                  <Button type="button" variant="outline" size="sm">
+                    Crear Puntos de Salida
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {departurePoints.map((point) => (
+                  <div
+                    key={point._id}
+                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      id={`departure-${point._id}`}
+                      checked={formData.departurePoints.includes(point._id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData({
+                            ...formData,
+                            departurePoints: [...formData.departurePoints, point._id]
+                          })
+                        } else {
+                          setFormData({
+                            ...formData,
+                            departurePoints: formData.departurePoints.filter(id => id !== point._id)
+                          })
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-gray-300"
+                    />
+                    <label
+                      htmlFor={`departure-${point._id}`}
+                      className="flex-1 cursor-pointer"
+                    >
+                      <p className="font-medium">{point.name}</p>
+                      <p className="text-sm text-muted-foreground">{point.city}</p>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

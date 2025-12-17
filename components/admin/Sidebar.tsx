@@ -7,7 +7,8 @@ import {
   ShoppingCart, 
   Users, 
   Home, 
-  LogOut 
+  LogOut,
+  MapPin
 } from 'lucide-react'
 
 
@@ -17,7 +18,7 @@ interface SidebarProps {
 
 export function Sidebar({ logoutAction }: SidebarProps) {
   return (
-    <div className="w-72 bg-background/80 backdrop-blur-xl border-r border-border/50 shadow-xl h-screen flex flex-col">
+    <div className="w-58 bg-background/80 backdrop-blur-xl border-r border-border/50 shadow-xl h-screen flex flex-col">
       <div className="p-8 border-b border-border/50">
         <h1 className="text-2xl font-black bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           Admin Luzara
@@ -37,13 +38,12 @@ export function Sidebar({ logoutAction }: SidebarProps) {
             <span className="font-semibold">Paquetes</span>
           </Button>
         </Link>
-        <Link href="/admin/orders">
+        <Link href="/admin/departure-points">
           <Button variant="ghost" className="w-full justify-start">
-            <ShoppingCart className="w-5 h-5 mr-3" />
-            <span className="font-semibold">Órdenes</span>
+            <MapPin className="w-5 h-5 mr-3" />
+            <span className="font-semibold">Puntos de Salida</span>
           </Button>
         </Link>
-
       </nav>
       <div className="p-6 border-t border-border/50 space-y-2">
         <Link href="/">

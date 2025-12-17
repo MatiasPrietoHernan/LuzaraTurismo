@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       information: JSON.parse(formData.get('information') as string),
       hotel: JSON.parse(formData.get('hotel') as string),
       availableDates: JSON.parse(formData.get('availableDates') as string),
+      departurePoints: JSON.parse(formData.get('departurePoints') as string || '[]'),
       mainImage: '',
       gallery: [] as string[]
     }

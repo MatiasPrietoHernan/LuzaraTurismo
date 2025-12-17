@@ -11,20 +11,20 @@ export function Header() {
         <div className="flex items-center justify-between py-2 text-sm border-b border-slate-100">
           <div className="flex items-center gap-6">
             <a 
-              href="mailto:info@luzaraturismo.com" 
+              href="mailto:turismoluzara@gmail.com" 
               className="hidden sm:flex items-center gap-2 text-slate-600 hover:text-[#4A9B9B] transition-colors duration-200"
             >
               <Mail className="w-4 h-4" />
-              <span>info@luzaraturismo.com</span>
+              <span>turismoluzara@gmail.com</span>
             </a>
           </div>
           <div className="flex items-center gap-4">
             <a 
-              href="tel:+5491234567890" 
+              href="tel:+5493813340304" 
               className="flex items-center gap-2 text-slate-600 hover:text-[#4A9B9B] transition-colors duration-200"
             >
               <Phone className="w-4 h-4" />
-              <span className="font-medium">+54 9 123 456 7890</span>
+              <span className="font-medium">+54 9 381 334-0304</span>
             </a>
             <Link 
               href="/admin" 

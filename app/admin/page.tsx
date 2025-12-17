@@ -51,10 +51,10 @@ export default function AdminDashboard() {
   if (!stats) return <div>Error loading stats</div>
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
+          <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Dashboard
           </h1>
           <p className="text-xl text-muted-foreground">Bienvenido al panel de Luzara Turismo</p>
@@ -69,7 +69,7 @@ export default function AdminDashboard() {
                 <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center group-hover:bg-primary/30 transition-colors">
                   <PackageIcon className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle className="text-2xl font-black text-primary">Publicados</CardTitle>
+                <CardTitle className="text-1xl font-black text-primary">Publicados</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -86,7 +86,7 @@ export default function AdminDashboard() {
                 <div className="w-12 h-12 bg-destructive/20 rounded-xl flex items-center justify-center group-hover:bg-destructive/30 transition-colors">
                   <AlertCircle className="w-6 h-6 text-destructive" />
                 </div>
-                <CardTitle className="text-2xl font-black text-destructive">Desactivados</CardTitle>
+                <CardTitle className="text-1xl font-black text-destructive">Desactivados</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -102,7 +102,7 @@ export default function AdminDashboard() {
               <div className="w-12 h-12 bg-secondary/20 rounded-xl flex items-center justify-center group-hover:bg-secondary/30 transition-colors">
                 <CheckCircle className="w-6 h-6 text-secondary" />
               </div>
-              <CardTitle className="text-2xl font-black text-secondary">Activos</CardTitle>
+              <CardTitle className="text-1xl font-black text-secondary">Activos</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -117,7 +117,7 @@ export default function AdminDashboard() {
               <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center group-hover:bg-accent/30 transition-colors">
                 <MousePointer className="w-6 h-6 text-accent" />
               </div>
-              <CardTitle className="text-2xl font-black text-accent">Más Clicado</CardTitle>
+              <CardTitle className="text-1xl font-black text-accent">Más Clicado</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShoppingCart className="w-5 h-5" />
@@ -139,7 +139,7 @@ export default function AdminDashboard() {
             <p className="text-3xl font-black">{stats.ordersCount}</p>
             <p className="text-sm text-muted-foreground">Total órdenes</p>
           </CardContent>
-        </Card>       
+        </Card>        */}
         <Card className="hover:shadow-xl transition-all cursor-pointer h-full group">
           <CardHeader>
             <CardTitle>Gestionar Paquetes</CardTitle>
