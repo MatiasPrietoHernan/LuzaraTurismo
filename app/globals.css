@@ -4,35 +4,57 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.99 0 0);
-  --foreground: oklch(0.25 0.02 240);
+  --background: oklch(0.99 0.003 240);
+  --foreground: oklch(0.12 0.02 240);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.25 0.02 240);
+  --card-foreground: oklch(0.12 0.02 240);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0.02 240);
-  /* Using Luzara brand navy blue */
-  --primary: oklch(0.35 0.05 240);
-  --primary-foreground: oklch(0.99 0 0);
-  /* Using Luzara teal/turquoise */
-  --secondary: oklch(0.60 0.12 200);
-  --secondary-foreground: oklch(0.99 0 0);
-  --muted: oklch(0.96 0.01 240);
-  --muted-foreground: oklch(0.50 0.02 240);
-  /* Using Luzara lime green accent */
-  --accent: oklch(0.75 0.15 120);
-  --accent-foreground: oklch(0.25 0.02 240);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.92 0.01 240);
-  --input: oklch(0.92 0.01 240);
-  --ring: oklch(0.60 0.12 200);
+  --popover-foreground: oklch(0.12 0.02 240);
+  
+  /* Luzara Brand Colors */
+  /* Primary dark blue (navy): #2C3E5C */
+  --primary: oklch(0.28 0.04 240);
+  --primary-foreground: oklch(0.98 0.01 240);
+  
+  /* Teal/cyan: #4A9B9B */
+  --secondary: oklch(0.58 0.08 185);
+  --secondary-foreground: oklch(0.98 0.01 240);
+  
+  /* Sophisticated muted - Light gray */
+  --muted: oklch(0.96 0.01 220);
+  --muted-foreground: oklch(0.48 0.02 220);
+  
+  /* Lime/yellow-green accent: #C8D96F */
+  --accent: oklch(0.72 0.15 120);
+  --accent-foreground: oklch(0.12 0.02 240);
+  
+  /* Medium green: #8BAF6F */
+  --accent-secondary: oklch(0.78 0.18 140);
+  --accent-secondary-foreground: oklch(0.12 0.02 240);
+  
+  /* Modern destructive - Warm red */
+  --destructive: oklch(0.65 0.22 20);
+  --destructive-foreground: oklch(0.98 0.01 240);
+  
+  /* Subtle borders and inputs */
+  --border: oklch(0.90 0.01 220);
+  --input: oklch(0.94 0.005 220);
+  --ring: oklch(0.58 0.08 185);
+  
   /* Brand color charts */
-  --chart-1: oklch(0.60 0.12 200);
-  --chart-2: oklch(0.75 0.15 120);
-  --chart-3: oklch(0.35 0.05 240);
-  --chart-4: oklch(0.65 0.13 180);
-  --chart-5: oklch(0.70 0.14 140);
-  --radius: 0.75rem;
+  --chart-1: oklch(0.28 0.04 240); /* Primary navy */
+  --chart-2: oklch(0.58 0.08 185); /* Teal/cyan */
+  --chart-3: oklch(0.72 0.15 120); /* Lime accent */
+  --chart-4: oklch(0.78 0.18 140); /* Medium green */
+  --chart-5: oklch(0.65 0.22 20); /* Destructive red */
+  
+  /* Additional brand colors */
+  --navy: oklch(0.28 0.04 240);
+  --teal: oklch(0.58 0.08 185);
+  --lime: oklch(0.72 0.15 120);
+  --green: oklch(0.78 0.18 140);
+  
+  --radius: 0.875rem;
 }
 
 .dark {
@@ -101,5 +123,116 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Utility classes for text truncation */
+@layer utilities {
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* Luzara Brand gradient utilities */
+  .gradient-primary {
+    background: linear-gradient(135deg, var(--primary), var(--teal));
+  }
+  
+  .gradient-accent {
+    background: linear-gradient(135deg, var(--accent), var(--green));
+  }
+  
+  .gradient-brand {
+    background: linear-gradient(135deg, var(--navy), var(--teal), var(--lime));
+  }
+  
+  .gradient-ocean {
+    background: linear-gradient(135deg, var(--teal), var(--navy));
+  }
+  
+  .gradient-sunset {
+    background: linear-gradient(135deg, var(--destructive), var(--accent));
+  }
+
+  /* Modern shadow utilities */
+  .shadow-glow {
+    box-shadow: 0 0 20px rgba(100, 200, 255, 0.3);
+  }
+  
+  .shadow-card {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+  
+  .shadow-card-hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Smooth transitions */
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .transition-bounce {
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  /* Glass morphism effect */
+  .glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .glass-dark {
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Modern animations */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  /* Modern text effects */
+  .text-gradient {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 }
