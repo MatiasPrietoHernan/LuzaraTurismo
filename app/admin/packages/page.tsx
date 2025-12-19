@@ -1,12 +1,20 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/hooks/use-toast'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,17 +42,39 @@ interface IPackage {
   mainImage?: string
 }
 
+const PAGE_SIZE = 10
+
 export default function PackagesPage() {
   const [packages, setPackages] = useState<IPackage[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalPackages, setTotalPackages] = useState(0)
   const { toast } = useToast()
 
-  const fetchPackages = async () => {
+  const fetchPackages = useCallback(async (pageToFetch: number) => {
     try {
-      const res = await fetch('/api/admin/packages')
+      setLoading(true)
+      const res = await fetch(`/api/admin/packages?page=${pageToFetch}&limit=${PAGE_SIZE}`)
+      
+      if (!res.ok) {
+        throw new Error('Error al cargar paquetes')
+      }
+
       const data = await res.json()
-      setPackages(data)
+      const safeTotalPages = data.totalPages ?? 0
+
+      if (safeTotalPages > 0 && pageToFetch > safeTotalPages) {
+        setTotalPackages(data.total || 0)
+        setTotalPages(safeTotalPages)
+        setPage(safeTotalPages)
+        return
+      }
+
+      setPackages(data.packages || [])
+      setTotalPackages(data.total || 0)
+      setTotalPages(safeTotalPages)
     } catch (error) {
       toast({
         title: "Error",
@@ -54,11 +84,16 @@ export default function PackagesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
   useEffect(() => {
-    fetchPackages()
-  }, [])
+    fetchPackages(page)
+  }, [fetchPackages, page])
+
+  const handlePageChange = (newPage: number) => {
+    if (totalPages === 0 || newPage < 1 || (totalPages > 0 && newPage > totalPages) || newPage === page) return
+    setPage(newPage)
+  }
 
   const handleToggleActive = async (id: string, currentValue: boolean) => {
     try {
@@ -69,9 +104,11 @@ export default function PackagesPage() {
       })
 
       if (res.ok) {
-        setPackages(packages.map(pkg => 
-          pkg._id === id ? { ...pkg, isActive: !currentValue } : pkg
-        ))
+        setPackages(prevPackages => 
+          prevPackages.map(pkg => 
+            pkg._id === id ? { ...pkg, isActive: !currentValue } : pkg
+          )
+        )
         toast({
           title: "Actualizado",
           description: `Paquete ${!currentValue ? 'activado' : 'desactivado'} exitosamente`,
@@ -97,7 +134,18 @@ export default function PackagesPage() {
       })
 
       if (res.ok) {
-        setPackages(packages.filter(pkg => pkg._id !== deleteId))
+        const isLastItemOnPage = packages.length === 1
+        const nextTotal = Math.max(totalPackages - 1, 0)
+        const nextPage = isLastItemOnPage && page > 1 ? page - 1 : page
+
+        setTotalPackages(nextTotal)
+
+        if (nextPage !== page) {
+          setPage(nextPage)
+        } else {
+          fetchPackages(nextPage)
+        }
+
         toast({
           title: "Eliminado",
           description: "Paquete eliminado exitosamente",
@@ -150,7 +198,7 @@ export default function PackagesPage() {
               <PackageIcon className="h-6 w-6 text-primary" />
               Lista de Paquetes
               <Badge variant="secondary" className="ml-2">
-                {packages.length} total
+                {totalPackages} total
               </Badge>
             </CardTitle>
           </div>
@@ -173,106 +221,140 @@ export default function PackagesPage() {
               </Link>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="font-semibold">Imagen</TableHead>
-                    <TableHead className="font-semibold">Título</TableHead>
-                    <TableHead className="font-semibold">Destino</TableHead>
-                    <TableHead className="font-semibold">Noches</TableHead>
-                    <TableHead className="font-semibold">Precio</TableHead>
-                    <TableHead className="font-semibold">Promoción</TableHead>
-                    <TableHead className="font-semibold">Estado</TableHead>
-                    <TableHead className="font-semibold">Estadísticas</TableHead>
-                    <TableHead className="font-semibold text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {packages.map((pkg) => (
-                    <TableRow key={pkg._id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell>
-                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-                          {pkg.mainImage ? (
-                            <img 
-                              src={pkg.mainImage} 
-                              alt={pkg.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <PackageIcon className="h-6 w-6 text-muted-foreground" />
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium max-w-xs">
-                        <div className="truncate">{pkg.title}</div>
-                      </TableCell>
-                      <TableCell>{pkg.destination}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{pkg.nights} noches</Badge>
-                      </TableCell>
-                      <TableCell className="font-semibold">
-                        ARS ${Number(pkg.price)?.toLocaleString('es-AR')}
-                      </TableCell>
-                      <TableCell>
-                        {pkg.isPromotion ? (
-                          <Badge className="bg-green-500 hover:bg-green-600">
-                            Promoción
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">Normal</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={pkg.isActive}
-                            onCheckedChange={() => handleToggleActive(pkg._id, pkg.isActive)}
-                          />
-                          <span className="text-sm font-medium">
-                            {pkg.isActive ? (
-                              <Badge className="bg-blue-500 hover:bg-blue-600">Activo</Badge>
-                            ) : (
-                              <Badge variant="destructive">Inactivo</Badge>
-                            )}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1 text-xs">
-                          <div className="flex items-center gap-1">
-                            <Eye className="h-3 w-3 text-muted-foreground" />
-                            <span>{pkg.views || 0} vistas</span>
-                          </div>
-                          <div className="text-muted-foreground">
-                            {pkg.clicks || 0} clicks
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Link href={`/admin/packages/${pkg._id}`}>
-                            <Button variant="outline" size="sm" className="gap-1">
-                              <Edit className="h-3.5 w-3.5" />
-                              Editar
-                            </Button>
-                          </Link>
-                          <Button 
-                            variant="destructive" 
-                            size="sm" 
-                            className="gap-1"
-                            onClick={() => setDeleteId(pkg._id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Eliminar
-                          </Button>
-                        </div>
-                      </TableCell>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-semibold">Imagen</TableHead>
+                      <TableHead className="font-semibold">Título</TableHead>
+                      <TableHead className="font-semibold">Destino</TableHead>
+                      <TableHead className="font-semibold">Noches</TableHead>
+                      <TableHead className="font-semibold">Precio</TableHead>
+                      <TableHead className="font-semibold">Promoción</TableHead>
+                      <TableHead className="font-semibold">Estado</TableHead>
+                      <TableHead className="font-semibold">Estadísticas</TableHead>
+                      <TableHead className="font-semibold text-right">Acciones</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {packages.map((pkg) => (
+                      <TableRow key={pkg._id} className="hover:bg-muted/30 transition-colors">
+                        <TableCell>
+                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                            {pkg.mainImage ? (
+                              <img 
+                                src={pkg.mainImage} 
+                                alt={pkg.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <PackageIcon className="h-6 w-6 text-muted-foreground" />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium max-w-xs">
+                          <div className="truncate">{pkg.title}</div>
+                        </TableCell>
+                        <TableCell>{pkg.destination}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{pkg.nights} noches</Badge>
+                        </TableCell>
+                        <TableCell className="font-semibold">
+                          ARS ${Number(pkg.price)?.toLocaleString('es-AR')}
+                        </TableCell>
+                        <TableCell>
+                          {pkg.isPromotion ? (
+                            <Badge className="bg-green-500 hover:bg-green-600">
+                              Promoción
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Normal</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={pkg.isActive}
+                              onCheckedChange={() => handleToggleActive(pkg._id, pkg.isActive)}
+                            />
+                            <span className="text-sm font-medium">
+                              {pkg.isActive ? (
+                                <Badge className="bg-blue-500 hover:bg-blue-600">Activo</Badge>
+                              ) : (
+                                <Badge variant="destructive">Inactivo</Badge>
+                              )}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 text-xs">
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-3 w-3 text-muted-foreground" />
+                              <span>{pkg.views || 0} vistas</span>
+                            </div>
+                            <div className="text-muted-foreground">
+                              {pkg.clicks || 0} clicks
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Link href={`/admin/packages/${pkg._id}`}>
+                              <Button variant="outline" size="sm" className="gap-1">
+                                <Edit className="h-3.5 w-3.5" />
+                                Editar
+                              </Button>
+                            </Link>
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              className="gap-1"
+                              onClick={() => setDeleteId(pkg._id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Eliminar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+                          <div className="flex flex-col gap-4 border-t px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {(page - 1) * PAGE_SIZE + 1}–
+                {Math.min(page * PAGE_SIZE, totalPackages)} de {totalPackages} paquetes
+              </p>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1}
+                  onClick={() => handlePageChange(page - 1)}
+                >
+                  ← Anterior
+                </Button>
+
+                <span className="text-sm font-medium">
+                  Página {page} / {totalPages || 1}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages || totalPages === 0}
+                  onClick={() => handlePageChange(page + 1)}
+                >
+                  Siguiente →
+                </Button>
+              </div>
             </div>
+
+            </>
           )}
         </CardContent>
       </Card>
