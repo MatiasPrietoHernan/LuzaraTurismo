@@ -20,6 +20,7 @@ export interface IPackage extends Document {
   };
   availableDates: number[];
   departurePoints: Schema.Types.ObjectId[]; // 👈 Cambiado de string[] a ObjectId[]
+  type: 'PAQUETE ESTUDIANTILES' | 'PAQUETES INTERNACIONALES' | 'PAQUETES NACIONALES';
   badge?: string;
   description?: string;
   isPromotion?: boolean;
@@ -49,6 +50,7 @@ const PackageSchema = new Schema<IPackage>({
   },
   availableDates: [{ type: Number }],
   departurePoints: [{ type: Schema.Types.ObjectId, ref: 'DeparturePoint' }], // 👈 CORREGIDO
+  type: { type: String, required: true, enum: ['PAQUETE ESTUDIANTILES', 'PAQUETES INTERNACIONALES', 'PAQUETES NACIONALES'] },
   badge: { type: String },
   description: { type: String },
   isPromotion: { type: Boolean, default: false },
