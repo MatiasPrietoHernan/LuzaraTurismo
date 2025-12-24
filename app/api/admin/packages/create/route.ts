@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
       priceFrom: formData.get('priceFrom') ? Number(formData.get('priceFrom')) : undefined,
       description: formData.get('description') as string || undefined,
       badge: formData.get('badge') as string || undefined,
+      type: formData.get('type') as string,
       isPromotion: formData.get('isPromotion') === 'true',
       isPublished: formData.get('isPublished') === 'true',
       isActive: formData.get('isActive') === 'true',
@@ -30,9 +31,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar datos requeridos
-    if (!data.title || !data.destination || !data.nights || !data.departureDate || !data.price) {
+    if (!data.title || !data.destination || !data.nights || !data.departureDate || !data.price || !data.type) {
       return NextResponse.json(
-        { error: 'Faltan campos requeridos' }, 
+        { error: 'Faltan campos requeridos' },
         { status: 400 }
       )
     }

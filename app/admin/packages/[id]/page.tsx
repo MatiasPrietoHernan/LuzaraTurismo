@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import { 
@@ -44,6 +45,7 @@ interface IPackage {
   }
   availableDates: number[]
   departurePoints: string[]
+  type: 'PAQUETE ESTUDIANTILES' | 'PAQUETES INTERNACIONALES' | 'PAQUETES NACIONALES'
   badge?: string
   description?: string
   isPromotion: boolean
@@ -171,6 +173,7 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
       if (packageData.priceFrom) formData.append('priceFrom', packageData.priceFrom.toString())
       formData.append('description', packageData.description || '')
       formData.append('badge', packageData.badge || '')
+      formData.append('type', packageData.type)
       formData.append('isPromotion', packageData.isPromotion.toString())
       formData.append('isPublished', packageData.isPublished.toString())
       formData.append('isActive', packageData.isActive.toString())
@@ -399,7 +402,7 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="departureDate">Fecha de Salida *</Label>
                   <Input
@@ -418,6 +421,22 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
                     onChange={(e) => setPackageData({ ...packageData, badge: e.target.value })}
                     placeholder="Ej: EN AVION"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="type">Tipo de Paquete *</Label>
+                  <Select
+                    value={packageData.type}
+                    onValueChange={(value) => setPackageData({ ...packageData, type: value as IPackage['type'] })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona el tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PAQUETE ESTUDIANTILES">PAQUETE ESTUDIANTILES</SelectItem>
+                      <SelectItem value="PAQUETES INTERNACIONALES">PAQUETES INTERNACIONALES</SelectItem>
+                      <SelectItem value="PAQUETES NACIONALES">PAQUETES NACIONALES</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

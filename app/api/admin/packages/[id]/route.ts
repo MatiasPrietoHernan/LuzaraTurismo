@@ -64,6 +64,7 @@ export async function PUT(
         departureDate: formData.get('departureDate'),
         description: formData.get('description') || undefined,
         badge: formData.get('badge') || undefined,
+        type: formData.get('type'),
         isPromotion: formData.get('isPromotion') === 'true',
         isPublished: formData.get('isPublished') === 'true',
         isActive: formData.get('isActive') === 'true',
