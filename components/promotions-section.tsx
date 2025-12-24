@@ -123,7 +123,12 @@ function PromotionCard({
 }: Promotion & { index?: number }) {
   return (
     <Link href={`/package/${_id}`} className="block group">
-      <Card className="shadow-card hover:shadow-card-hover transition-all duration-500 overflow-hidden p-0 cursor-pointer transform hover:-translate-y-2 border-0 bg-white/95 backdrop-blur-sm relative">
+      <Card className=" h-[520px] 
+  flex flex-col 
+  shadow-card 
+  hover:shadow-card-hover 
+  transition-all
+  overflow-hidden">
         {/* Flash sale badge */}
         <div className="absolute top-4 right-4 z-20 animate-pulse-glow">
           <div className="bg-destructive text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
@@ -131,7 +136,7 @@ function PromotionCard({
           </div>
         </div>
         
-        <div className="relative h-72 overflow-hidden">
+        <div className="relative h-64 shrink-0 overflow-hidden">
           <img
             src={mainImage || "/placeholder.svg"}
             alt={title}
@@ -148,47 +153,65 @@ function PromotionCard({
             </Badge>
           )}
         </div>
-        <CardContent className="p-6 relative">
+        <CardContent className="p-6 flex flex-col flex-1">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-destructive via-accent to-secondary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
           
           <div className="flex items-start justify-between mb-3">
-            <h3 className="text-xl font-bold text-foreground min-h-[3.5rem] flex-1 group-hover:text-gradient transition-colors duration-300">
-              {title}
-            </h3>
+          <h3
+            className="
+              text-lg
+              font-bold
+              truncate
+              h-[48px]
+              flex items-center
+              mb-2
+            "
+            title={title}
+          >
+            {title}
+          </h3>
+
+
           </div>
-          
-          {destination && (
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <MapPin className="w-4 h-4 text-accent" />
-              <span className="text-sm font-medium">{destination}</span>
-            </div>
-          )}
-          
-          {nights && (
-            <div className="flex items-center gap-2 text-muted-foreground mb-3">
-              <Calendar className="w-4 h-4 text-accent" />
-              <span className="text-sm font-medium">{nights} noches</span>
-            </div>
-          )}
-          
-          <div className="flex items-baseline gap-2 justify-between">
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <Zap className="w-5 h-5 text-destructive animate-pulse-glow" />
-              {priceFrom && (
-                <span className="text-sm text-muted-foreground line-through">
-                  ARS {priceFrom.toLocaleString("es-AR")}
-                </span>
-              )}
-              <span className="text-2xl font-bold text-gradient">
-                ARS {price.toLocaleString("es-AR")}
-              </span>
-            </div>
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </div>
+         <div className="min-h-[44px] space-y-1 mb-4">
+  {destination && (
+    <div className="flex items-center gap-2 text-muted-foreground">
+      <MapPin className="w-4 h-4 text-accent" />
+      <span className="text-sm truncate">{destination}</span>
+    </div>
+  )}
+
+  {nights && (
+    <div className="flex items-center gap-2 text-muted-foreground">
+      <Calendar className="w-4 h-4 text-accent" />
+      <span className="text-sm">{nights} noches</span>
+    </div>
+  )}
+</div>
+
+          <div className="mt-auto pt-4 border-t flex items-center justify-between">
+  <div className="flex items-center gap-2">
+    <Zap className="w-5 h-5 text-destructive" />
+    {priceFrom && (
+      <span className="text-sm line-through text-muted-foreground">
+        ARS {priceFrom.toLocaleString("es-AR")}
+      </span>
+    )}
+    <span className="text-2xl font-bold text-gradient">
+      ARS {price.toLocaleString("es-AR")}
+    </span>
+  </div>
+
+  <svg
+    className="w-5 h-5 text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+</div>
+
         </CardContent>
       </Card>
     </Link>

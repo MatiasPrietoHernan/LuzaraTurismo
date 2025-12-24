@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Link from 'next/link'
 import { ArrowLeft, Upload, Image as ImageIcon, Hotel, Bus, CheckCircle, MapPin } from 'lucide-react'
 
@@ -27,6 +28,7 @@ interface FormData {
   priceFrom?: number
   description: string
   badge: string
+  type: 'PAQUETE ESTUDIANTILES' | 'PAQUETES INTERNACIONALES' | 'PAQUETES NACIONALES'
   isPromotion: boolean
   isPublished: boolean
   isActive: boolean
@@ -54,6 +56,7 @@ export default function CreatePackagePage() {
     price: 0,
     description: '',
     badge: '',
+    type: 'PAQUETE ESTUDIANTILES',
     isPromotion: false,
     isPublished: true,
     isActive: true,
@@ -97,6 +100,7 @@ export default function CreatePackagePage() {
     if (formData.priceFrom) data.append('priceFrom', formData.priceFrom.toString())
     data.append('description', formData.description)
     data.append('badge', formData.badge)
+    data.append('type', formData.type)
     data.append('isPromotion', formData.isPromotion.toString())
     data.append('isPublished', formData.isPublished.toString())
     data.append('isActive', formData.isActive.toString())
@@ -282,7 +286,7 @@ export default function CreatePackagePage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <Label>Etiqueta</Label>
                 <Input
@@ -291,6 +295,22 @@ export default function CreatePackagePage() {
                   className="mt-2"
                   placeholder="Ej: EN AVION"
                 />
+              </div>
+              <div>
+                <Label>Tipo de Paquete *</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) => setFormData({ ...formData, type: value as FormData['type'] })}
+                >
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Selecciona el tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PAQUETE ESTUDIANTILES">PAQUETE ESTUDIANTILES</SelectItem>
+                    <SelectItem value="PAQUETES INTERNACIONALES">PAQUETES INTERNACIONALES</SelectItem>
+                    <SelectItem value="PAQUETES NACIONALES">PAQUETES NACIONALES</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center space-x-2">
                 <Switch

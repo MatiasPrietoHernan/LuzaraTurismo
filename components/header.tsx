@@ -58,25 +58,32 @@ export function Header() {
               INICIO
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#4A9B9B] transition-all duration-200 group-hover:w-full"></span>
             </Link>
-            <Link 
-              href="/paquetes" 
+            <Link
+              href="/paquetes/nacionales"
               className="font-medium text-[#2C3E5C] hover:text-[#4A9B9B] transition-colors duration-200 relative group"
             >
-              PAQUETES
+              PAQUETES NACIONALES
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#4A9B9B] transition-all duration-200 group-hover:w-full"></span>
+            </Link>
+            <Link
+              href="/paquetes/internacionales"
+              className="font-medium text-[#2C3E5C] hover:text-[#4A9B9B] transition-colors duration-200 relative group"
+            >
+              PAQUETES INTERNACIONALES
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#4A9B9B] transition-all duration-200 group-hover:w-full"></span>
+            </Link>
+            <Link
+              href="/paquetes/estudiantiles"
+              className="font-medium text-[#2C3E5C] hover:text-[#4A9B9B] transition-colors duration-200 relative group"
+            >
+              PAQUETES ESTUDIANTILES
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#4A9B9B] transition-all duration-200 group-hover:w-full"></span>
             </Link>
             <Link 
-              href="#nosotros" 
+              href="/about" 
               className="font-medium text-[#2C3E5C] hover:text-[#4A9B9B] transition-colors duration-200 relative group"
             >
               ¿QUIÉNES SOMOS?
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#4A9B9B] transition-all duration-200 group-hover:w-full"></span>
-            </Link>
-            <Link 
-              href="#contacto" 
-              className="font-medium text-[#2C3E5C] hover:text-[#4A9B9B] transition-colors duration-200 relative group"
-            >
-              CONTACTO
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#4A9B9B] transition-all duration-200 group-hover:w-full"></span>
             </Link>
           </nav>
