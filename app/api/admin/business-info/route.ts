@@ -60,7 +60,7 @@ export async function PUT(request: NextRequest) {
       setDefaultsOnInsert: true,
     }).lean()
 
-    revalidateTag(CACHE_TAG)
+    revalidateTag(CACHE_TAG, 'page')
 
     return NextResponse.json(info)
   } catch (error) {

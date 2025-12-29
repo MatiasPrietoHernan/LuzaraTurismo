@@ -48,13 +48,7 @@ export async function PUT(
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
       console.log(formData)
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'packages')
-      
-      // Crear directorio si no existe
-      if (!existsSync(uploadDir)) {
-        await mkdir(uploadDir, { recursive: true })
-      }
-      
+
       // Preparar datos de actualización
       const updateData: any = {
         title: formData.get('title'),
@@ -69,12 +63,62 @@ export async function PUT(
         isPublished: formData.get('isPublished') === 'true',
         isActive: formData.get('isActive') === 'true',
       }
-      
-      // Agregar priceFrom si existe
+
+      // Validar datos requeridos
+      const errors: string[] = []
+
+      if (!updateData.title?.trim()) errors.push('El título es obligatorio')
+      if (!updateData.destination?.trim()) errors.push('El destino es obligatorio')
+      if (!updateData.nights || updateData.nights < 1) errors.push('Las noches deben ser al menos 1')
+      if (!updateData.departureDate) errors.push('La fecha de salida es obligatoria')
+      if (!updateData.price || updateData.price <= 0) errors.push('El precio debe ser mayor a 0')
+      if (!updateData.type) errors.push('El tipo de paquete es obligatorio')
+
+      // Validar fecha futura
+      const departureDate = new Date(updateData.departureDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (departureDate < today) errors.push('La fecha de salida debe ser futura')
+
+      // Validar precio desde si existe
       const priceFrom = formData.get('priceFrom')
       if (priceFrom) {
         updateData.priceFrom = Number(priceFrom)
+        if (updateData.priceFrom <= 0) {
+          errors.push('El precio desde debe ser mayor a 0')
+        }
+        if (updateData.priceFrom >= updateData.price) {
+          errors.push('El precio desde debe ser menor al precio regular')
+        }
       }
+
+      // Validar hotel
+      const hotelStr = formData.get('hotel') as string
+      if (hotelStr) {
+        try {
+          const hotel = JSON.parse(hotelStr)
+          if (!hotel.name?.trim()) errors.push('El nombre del hotel es obligatorio')
+          if (!hotel.roomType?.trim()) errors.push('El tipo de habitación es obligatorio')
+        } catch (e) {
+          errors.push('Error en los datos del hotel')
+        }
+      }
+
+      if (errors.length > 0) {
+        return NextResponse.json(
+          { error: 'Errores de validación', details: errors },
+          { status: 400 }
+        )
+      }
+
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'packages')
+
+      // Crear directorio si no existe
+      if (!existsSync(uploadDir)) {
+        await mkdir(uploadDir, { recursive: true })
+      }
+      
+      // priceFrom ya se manejó en la validación anterior
       
       // Procesar imagen principal
       const mainImageFile = formData.get('mainImage') as File | null
@@ -116,15 +160,15 @@ export async function PUT(
       if (servicesStr) {
         updateData.services = JSON.parse(servicesStr)
       }
-      
+
       const informationStr = formData.get('information') as string
       if (informationStr) {
         updateData.information = JSON.parse(informationStr)
       }
-      
-      const hotelStr = formData.get('hotel') as string
-      if (hotelStr) {
-        updateData.hotel = JSON.parse(hotelStr)
+
+      // hotel ya se validó arriba, ahora solo lo parseamos
+      if (formData.get('hotel')) {
+        updateData.hotel = JSON.parse(formData.get('hotel') as string)
       }
       
       const availableDatesStr = formData.get('availableDates') as string
@@ -152,7 +196,7 @@ export async function PUT(
         updateData,
         { new: true, runValidators: true }
       )
-      console.log('Paquete actualizado - departurePoints:', updatedPackage?.departurePoints) // 👈 AGREGA ESTO
+      //console.log('Paquete actualizado - departurePoints:', updatedPackage?.departurePoints) // 👈 AGREGA ESTO
 
       if (!updatedPackage) {
         return NextResponse.json(
@@ -161,24 +205,46 @@ export async function PUT(
         )
       }
       
+      await fetch(process.env.PACKAGE_WEBHOOK_URL || '', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: updatedPackage,
+          method: 'update'
+        }),
+      });
+
       return NextResponse.json(updatedPackage)
     } else {
       // Si es JSON simple (para toggles rápidos como isActive)
       const body = await request.json()
-      
+
       const updatedPackage = await Package.findByIdAndUpdate(
         id,
         body,
         { new: true, runValidators: true }
       )
-      
+
       if (!updatedPackage) {
         return NextResponse.json(
           { error: 'Paquete no encontrado' },
           { status: 404 }
         )
       }
-      
+
+      await fetch(process.env.PACKAGE_WEBHOOK_URL || '', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: updatedPackage,
+          method: 'update'
+        }),
+      });
+
       return NextResponse.json(updatedPackage)
     }
   } catch (error) {
@@ -231,7 +297,13 @@ export async function DELETE(
     }
     
     await Package.findByIdAndDelete(id)
-    
+    await fetch(process.env.PACKAGE_WEBHOOK_URL || '', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({data:pkg, method: 'delete'})
+    })
     return NextResponse.json({ 
       success: true,
       message: 'Paquete eliminado exitosamente' 

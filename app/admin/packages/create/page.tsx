@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import { ArrowLeft, Upload, Image as ImageIcon, Hotel, Bus, CheckCircle, MapPin } from 'lucide-react'
 
@@ -48,6 +49,7 @@ interface FormData {
 
 export default function CreatePackagePage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [formData, setFormData] = useState<FormData>({
     title: '',
     destination: '',
@@ -72,6 +74,7 @@ export default function CreatePackagePage() {
   const [previewMain, setPreviewMain] = useState('')
   const [previewGallery, setPreviewGallery] = useState<string[]>([])
   const [departurePoints, setDeparturePoints] = useState<IDeparturePoint[]>([])
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const fetchDeparturePoints = async () => {
@@ -87,8 +90,80 @@ export default function CreatePackagePage() {
     fetchDeparturePoints()
   }, [])
 
+  const validateForm = () => {
+    const errors: Record<string, string> = {}
+    let hasErrors = false
+
+    // Validaciones básicas
+    if (!formData.title.trim()) {
+      errors.title = 'El título es obligatorio'
+      hasErrors = true
+    }
+    if (!formData.destination.trim()) {
+      errors.destination = 'El destino es obligatorio'
+      hasErrors = true
+    }
+    if (!formData.nights || formData.nights < 1) {
+      errors.nights = 'Las noches deben ser al menos 1'
+      hasErrors = true
+    }
+    if (!formData.departureDate) {
+      errors.departureDate = 'La fecha de salida es obligatoria'
+      hasErrors = true
+    } else {
+      // Validar fecha futura
+      const departureDate = new Date(formData.departureDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (departureDate < today) {
+        errors.departureDate = 'La fecha de salida debe ser futura'
+        hasErrors = true
+      }
+    }
+    if (!formData.price || formData.price <= 0) {
+      errors.price = 'El precio debe ser mayor a 0'
+      hasErrors = true
+    }
+    if (!formData.type) {
+      errors.type = 'El tipo de paquete es obligatorio'
+      hasErrors = true
+    }
+
+    // Validar hotel
+    if (!formData.hotel.name.trim()) {
+      errors.hotelName = 'El nombre del hotel es obligatorio'
+      hasErrors = true
+    }
+    if (!formData.hotel.roomType.trim()) {
+      errors.hotelRoomType = 'El tipo de habitación es obligatorio'
+      hasErrors = true
+    }
+
+    // Validar precio desde si existe
+    if (formData.priceFrom && formData.priceFrom <= 0) {
+      errors.priceFrom = 'El precio desde debe ser mayor a 0'
+      hasErrors = true
+    } else if (formData.priceFrom && formData.priceFrom >= formData.price) {
+      errors.priceFrom = 'El precio desde debe ser menor al precio regular'
+      hasErrors = true
+    }
+
+    setFieldErrors(errors)
+    return hasErrors
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (validateForm()) {
+      toast({
+        title: "Errores de validación",
+        description: "Por favor, corrige los errores marcados en el formulario",
+        variant: "destructive"
+      })
+      return
+    }
+
     setLoading(true)
 
     const data = new FormData()
@@ -230,17 +305,33 @@ export default function CreatePackagePage() {
                 <Label>Título *</Label>
                 <Input
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="mt-2"
+                  onChange={(e) => {
+                    setFormData({ ...formData, title: e.target.value })
+                    if (fieldErrors.title) {
+                      setFieldErrors({ ...fieldErrors, title: '' })
+                    }
+                  }}
+                  className={`mt-2 ${fieldErrors.title ? 'border-red-500' : ''}`}
                 />
+                {fieldErrors.title && (
+                  <p className="text-sm text-red-500 mt-1">{fieldErrors.title}</p>
+                )}
               </div>
               <div>
                 <Label>Destino *</Label>
                 <Input
                   value={formData.destination}
-                  onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                  className="mt-2"
+                  onChange={(e) => {
+                    setFormData({ ...formData, destination: e.target.value })
+                    if (fieldErrors.destination) {
+                      setFieldErrors({ ...fieldErrors, destination: '' })
+                    }
+                  }}
+                  className={`mt-2 ${fieldErrors.destination ? 'border-red-500' : ''}`}
                 />
+                {fieldErrors.destination && (
+                  <p className="text-sm text-red-500 mt-1">{fieldErrors.destination}</p>
+                )}
               </div>
             </div>
 
@@ -250,29 +341,53 @@ export default function CreatePackagePage() {
                 <Input
                   type="number"
                   value={formData.nights}
-                  onChange={(e) => setFormData({ ...formData, nights: Number(e.target.value) })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, nights: Number(e.target.value) })
+                    if (fieldErrors.nights) {
+                      setFieldErrors({ ...fieldErrors, nights: '' })
+                    }
+                  }}
                   min="1"
-                  className="mt-2"
+                  className={`mt-2 ${fieldErrors.nights ? 'border-red-500' : ''}`}
                 />
+                {fieldErrors.nights && (
+                  <p className="text-sm text-red-500 mt-1">{fieldErrors.nights}</p>
+                )}
               </div>
               <div>
                 <Label>Fecha de Salida *</Label>
                 <Input
                   type="date"
                   value={formData.departureDate}
-                  onChange={(e) => setFormData({ ...formData, departureDate: e.target.value })}
-                  className="mt-2"
+                  onChange={(e) => {
+                    setFormData({ ...formData, departureDate: e.target.value })
+                    if (fieldErrors.departureDate) {
+                      setFieldErrors({ ...fieldErrors, departureDate: '' })
+                    }
+                  }}
+                  className={`mt-2 ${fieldErrors.departureDate ? 'border-red-500' : ''}`}
                 />
+                {fieldErrors.departureDate && (
+                  <p className="text-sm text-red-500 mt-1">{fieldErrors.departureDate}</p>
+                )}
               </div>
               <div>
                 <Label>Precio (ARS) *</Label>
                 <Input
                   type="number"
                   value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, price: Number(e.target.value) })
+                    if (fieldErrors.price) {
+                      setFieldErrors({ ...fieldErrors, price: '' })
+                    }
+                  }}
                   min="0"
-                  className="mt-2"
+                  className={`mt-2 ${fieldErrors.price ? 'border-red-500' : ''}`}
                 />
+                {fieldErrors.price && (
+                  <p className="text-sm text-red-500 mt-1">{fieldErrors.price}</p>
+                )}
               </div>
             </div>
 
@@ -300,9 +415,14 @@ export default function CreatePackagePage() {
                 <Label>Tipo de Paquete *</Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value) => setFormData({ ...formData, type: value as FormData['type'] })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, type: value as FormData['type'] })
+                    if (fieldErrors.type) {
+                      setFieldErrors({ ...fieldErrors, type: '' })
+                    }
+                  }}
                 >
-                  <SelectTrigger className="mt-2">
+                  <SelectTrigger className={`mt-2 ${fieldErrors.type ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Selecciona el tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -311,6 +431,9 @@ export default function CreatePackagePage() {
                     <SelectItem value="PAQUETES NACIONALES">PAQUETES NACIONALES</SelectItem>
                   </SelectContent>
                 </Select>
+                {fieldErrors.type && (
+                  <p className="text-sm text-red-500 mt-1">{fieldErrors.type}</p>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
@@ -451,17 +574,33 @@ export default function CreatePackagePage() {
               <Label>Nombre del Hotel *</Label>
               <Input
                 value={formData.hotel.name}
-                onChange={(e) => setFormData({ ...formData, hotel: { ...formData.hotel, name: e.target.value } })}
-                className="mt-2"
+                onChange={(e) => {
+                  setFormData({ ...formData, hotel: { ...formData.hotel, name: e.target.value } })
+                  if (fieldErrors.hotelName) {
+                    setFieldErrors({ ...fieldErrors, hotelName: '' })
+                  }
+                }}
+                className={`mt-2 ${fieldErrors.hotelName ? 'border-red-500' : ''}`}
               />
+              {fieldErrors.hotelName && (
+                <p className="text-sm text-red-500 mt-1">{fieldErrors.hotelName}</p>
+              )}
             </div>
             <div>
               <Label>Tipo de Habitación *</Label>
               <Input
                 value={formData.hotel.roomType}
-                onChange={(e) => setFormData({ ...formData, hotel: { ...formData.hotel, roomType: e.target.value } })}
-                className="mt-2"
+                onChange={(e) => {
+                  setFormData({ ...formData, hotel: { ...formData.hotel, roomType: e.target.value } })
+                  if (fieldErrors.hotelRoomType) {
+                    setFieldErrors({ ...fieldErrors, hotelRoomType: '' })
+                  }
+                }}
+                className={`mt-2 ${fieldErrors.hotelRoomType ? 'border-red-500' : ''}`}
               />
+              {fieldErrors.hotelRoomType && (
+                <p className="text-sm text-red-500 mt-1">{fieldErrors.hotelRoomType}</p>
+              )}
             </div>
             <div>
               <Label>Zona</Label>

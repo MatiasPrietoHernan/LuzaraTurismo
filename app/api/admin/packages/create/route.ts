@@ -31,9 +31,36 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar datos requeridos
-    if (!data.title || !data.destination || !data.nights || !data.departureDate || !data.price || !data.type) {
+    const errors: string[] = []
+
+    if (!data.title?.trim()) errors.push('El título es obligatorio')
+    if (!data.destination?.trim()) errors.push('El destino es obligatorio')
+    if (!data.nights || data.nights < 1) errors.push('Las noches deben ser al menos 1')
+    if (!data.departureDate) errors.push('La fecha de salida es obligatoria')
+    if (!data.price || data.price <= 0) errors.push('El precio debe ser mayor a 0')
+    if (!data.type) errors.push('El tipo de paquete es obligatorio')
+
+    // Validar fecha futura
+    const departureDate = new Date(data.departureDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (departureDate < today) errors.push('La fecha de salida debe ser futura')
+
+    // Validar hotel
+    if (!data.hotel?.name?.trim()) errors.push('El nombre del hotel es obligatorio')
+    if (!data.hotel?.roomType?.trim()) errors.push('El tipo de habitación es obligatorio')
+
+    // Validar precio desde si existe
+    if (data.priceFrom && data.priceFrom <= 0) {
+      errors.push('El precio desde debe ser mayor a 0')
+    }
+    if (data.priceFrom && data.priceFrom >= data.price) {
+      errors.push('El precio desde debe ser menor al precio regular')
+    }
+
+    if (errors.length > 0) {
       return NextResponse.json(
-        { error: 'Faltan campos requeridos' },
+        { error: 'Errores de validación', details: errors },
         { status: 400 }
       )
     }
@@ -90,8 +117,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Final data - mainImage:', data.mainImage, 'gallery length:', data.gallery.length)
-
     const newPackage = await Package.create(data)
+
+    await fetch(process.env.PACKAGE_WEBHOOK_URL || '', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({data: newPackage, method: 'create'}),
+    })
 
     return NextResponse.json({ 
       success: true, 

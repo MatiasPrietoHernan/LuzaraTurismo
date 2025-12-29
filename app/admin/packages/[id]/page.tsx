@@ -73,6 +73,7 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
   const [deletedGalleryImages, setDeletedGalleryImages] = useState<string[]>([])
   const [id, setId] = useState<string>('')
   const [departurePoints, setDeparturePoints] = useState<IDeparturePoint[]>([])
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     params.then(p => setId(p.id))
@@ -155,10 +156,83 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
     setGalleryFiles(galleryFiles.filter((_, i) => i !== index))
   }
 
+  const validateForm = () => {
+    if (!packageData) return false
+
+    const errors: Record<string, string> = {}
+    let hasErrors = false
+
+    // Validaciones básicas
+    if (!packageData.title.trim()) {
+      errors.title = 'El título es obligatorio'
+      hasErrors = true
+    }
+    if (!packageData.destination.trim()) {
+      errors.destination = 'El destino es obligatorio'
+      hasErrors = true
+    }
+    if (!packageData.nights || packageData.nights < 1) {
+      errors.nights = 'Las noches deben ser al menos 1'
+      hasErrors = true
+    }
+    if (!packageData.departureDate) {
+      errors.departureDate = 'La fecha de salida es obligatoria'
+      hasErrors = true
+    } else {
+      // Validar fecha futura
+      const departureDate = new Date(packageData.departureDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (departureDate < today) {
+        errors.departureDate = 'La fecha de salida debe ser futura'
+        hasErrors = true
+      }
+    }
+    if (!packageData.price || packageData.price <= 0) {
+      errors.price = 'El precio debe ser mayor a 0'
+      hasErrors = true
+    }
+    if (!packageData.type) {
+      errors.type = 'El tipo de paquete es obligatorio'
+      hasErrors = true
+    }
+
+    // Validar hotel
+    if (!packageData.hotel?.name?.trim()) {
+      errors.hotelName = 'El nombre del hotel es obligatorio'
+      hasErrors = true
+    }
+    if (!packageData.hotel?.roomType?.trim()) {
+      errors.hotelRoomType = 'El tipo de habitación es obligatorio'
+      hasErrors = true
+    }
+
+    // Validar precio desde si existe
+    if (packageData.priceFrom && packageData.priceFrom <= 0) {
+      errors.priceFrom = 'El precio desde debe ser mayor a 0'
+      hasErrors = true
+    } else if (packageData.priceFrom && packageData.priceFrom >= packageData.price) {
+      errors.priceFrom = 'El precio desde debe ser menor al precio regular'
+      hasErrors = true
+    }
+
+    setFieldErrors(errors)
+    return hasErrors
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!packageData) return
-    
+
+    if (validateForm()) {
+      toast({
+        title: "Errores de validación",
+        description: "Por favor, corrige los errores marcados en el formulario",
+        variant: "destructive"
+      })
+      return
+    }
+
     setSaving(true)
 
     try {
@@ -352,18 +426,36 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
                   <Input
                     id="title"
                     value={packageData.title}
-                    onChange={(e) => setPackageData({ ...packageData, title: e.target.value })}
+                    onChange={(e) => {
+                      setPackageData({ ...packageData, title: e.target.value })
+                      if (fieldErrors.title) {
+                        setFieldErrors({ ...fieldErrors, title: '' })
+                      }
+                    }}
+                    className={fieldErrors.title ? 'border-red-500' : ''}
                     required
                   />
+                  {fieldErrors.title && (
+                    <p className="text-sm text-red-500">{fieldErrors.title}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="destination">Destino *</Label>
                   <Input
                     id="destination"
                     value={packageData.destination}
-                    onChange={(e) => setPackageData({ ...packageData, destination: e.target.value })}
+                    onChange={(e) => {
+                      setPackageData({ ...packageData, destination: e.target.value })
+                      if (fieldErrors.destination) {
+                        setFieldErrors({ ...fieldErrors, destination: '' })
+                      }
+                    }}
+                    className={fieldErrors.destination ? 'border-red-500' : ''}
                     required
                   />
+                  {fieldErrors.destination && (
+                    <p className="text-sm text-red-500">{fieldErrors.destination}</p>
+                  )}
                 </div>
               </div>
 
@@ -374,10 +466,19 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
                     id="nights"
                     type="number"
                     value={packageData.nights}
-                    onChange={(e) => setPackageData({ ...packageData, nights: Number(e.target.value) })}
+                    onChange={(e) => {
+                      setPackageData({ ...packageData, nights: Number(e.target.value) })
+                      if (fieldErrors.nights) {
+                        setFieldErrors({ ...fieldErrors, nights: '' })
+                      }
+                    }}
+                    className={fieldErrors.nights ? 'border-red-500' : ''}
                     min="1"
                     required
                   />
+                  {fieldErrors.nights && (
+                    <p className="text-sm text-red-500">{fieldErrors.nights}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="price">Precio (ARS) *</Label>
@@ -385,10 +486,19 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
                     id="price"
                     type="number"
                     value={packageData.price}
-                    onChange={(e) => setPackageData({ ...packageData, price: Number(e.target.value) })}
+                    onChange={(e) => {
+                      setPackageData({ ...packageData, price: Number(e.target.value) })
+                      if (fieldErrors.price) {
+                        setFieldErrors({ ...fieldErrors, price: '' })
+                      }
+                    }}
+                    className={fieldErrors.price ? 'border-red-500' : ''}
                     min="0"
                     required
                   />
+                  {fieldErrors.price && (
+                    <p className="text-sm text-red-500">{fieldErrors.price}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="priceFrom">Precio Desde (ARS)</Label>
@@ -396,9 +506,18 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
                     id="priceFrom"
                     type="number"
                     value={packageData.priceFrom || ''}
-                    onChange={(e) => setPackageData({ ...packageData, priceFrom: Number(e.target.value) || undefined })}
+                    onChange={(e) => {
+                      setPackageData({ ...packageData, priceFrom: Number(e.target.value) || undefined })
+                      if (fieldErrors.priceFrom) {
+                        setFieldErrors({ ...fieldErrors, priceFrom: '' })
+                      }
+                    }}
+                    className={fieldErrors.priceFrom ? 'border-red-500' : ''}
                     min="0"
                   />
+                  {fieldErrors.priceFrom && (
+                    <p className="text-sm text-red-500">{fieldErrors.priceFrom}</p>
+                  )}
                 </div>
               </div>
 
@@ -409,9 +528,18 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
                     id="departureDate"
                     type="date"
                     value={packageData.departureDate?.split('T')[0] || ''}
-                    onChange={(e) => setPackageData({ ...packageData, departureDate: e.target.value })}
+                    onChange={(e) => {
+                      setPackageData({ ...packageData, departureDate: e.target.value })
+                      if (fieldErrors.departureDate) {
+                        setFieldErrors({ ...fieldErrors, departureDate: '' })
+                      }
+                    }}
+                    className={fieldErrors.departureDate ? 'border-red-500' : ''}
                     required
                   />
+                  {fieldErrors.departureDate && (
+                    <p className="text-sm text-red-500">{fieldErrors.departureDate}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="badge">Etiqueta</Label>
@@ -426,9 +554,14 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
                   <Label htmlFor="type">Tipo de Paquete *</Label>
                   <Select
                     value={packageData.type}
-                    onValueChange={(value) => setPackageData({ ...packageData, type: value as IPackage['type'] })}
+                    onValueChange={(value) => {
+                      setPackageData({ ...packageData, type: value as IPackage['type'] })
+                      if (fieldErrors.type) {
+                        setFieldErrors({ ...fieldErrors, type: '' })
+                      }
+                    }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={fieldErrors.type ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Selecciona el tipo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -437,6 +570,9 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
                       <SelectItem value="PAQUETES NACIONALES">PAQUETES NACIONALES</SelectItem>
                     </SelectContent>
                   </Select>
+                  {fieldErrors.type && (
+                    <p className="text-sm text-red-500 mt-1">{fieldErrors.type}</p>
+                  )}
                 </div>
               </div>
 
@@ -665,23 +801,41 @@ export default function EditPackagePage({ params }: { params: Promise<{ id: stri
                 <Label>Nombre del Hotel *</Label>
                 <Input
                   value={packageData.hotel?.name || ''}
-                  onChange={(e) => setPackageData({
-                    ...packageData,
-                    hotel: { ...packageData.hotel, name: e.target.value }
-                  })}
+                  onChange={(e) => {
+                    setPackageData({
+                      ...packageData,
+                      hotel: { ...packageData.hotel, name: e.target.value }
+                    })
+                    if (fieldErrors.hotelName) {
+                      setFieldErrors({ ...fieldErrors, hotelName: '' })
+                    }
+                  }}
+                  className={fieldErrors.hotelName ? 'border-red-500' : ''}
                   required
                 />
+                {fieldErrors.hotelName && (
+                  <p className="text-sm text-red-500">{fieldErrors.hotelName}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Tipo de Habitación *</Label>
                 <Input
                   value={packageData.hotel?.roomType || ''}
-                  onChange={(e) => setPackageData({
-                    ...packageData,
-                    hotel: { ...packageData.hotel, roomType: e.target.value }
-                  })}
+                  onChange={(e) => {
+                    setPackageData({
+                      ...packageData,
+                      hotel: { ...packageData.hotel, roomType: e.target.value }
+                    })
+                    if (fieldErrors.hotelRoomType) {
+                      setFieldErrors({ ...fieldErrors, hotelRoomType: '' })
+                    }
+                  }}
+                  className={fieldErrors.hotelRoomType ? 'border-red-500' : ''}
                   required
                 />
+                {fieldErrors.hotelRoomType && (
+                  <p className="text-sm text-red-500">{fieldErrors.hotelRoomType}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Zona</Label>

@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
+import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
+import { Search } from 'lucide-react'
 import {
   Pagination,
   PaginationContent,
@@ -51,13 +53,16 @@ export default function PackagesPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
   const [totalPackages, setTotalPackages] = useState(0)
+  const [search, setSearch] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
   const { toast } = useToast()
 
-  const fetchPackages = useCallback(async (pageToFetch: number) => {
+  const fetchPackages = useCallback(async (pageToFetch: number, searchTerm: string = '') => {
     try {
       setLoading(true)
-      const res = await fetch(`/api/admin/packages?page=${pageToFetch}&limit=${PAGE_SIZE}`)
-      
+      const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''
+      const res = await fetch(`/api/admin/packages?page=${pageToFetch}&limit=${PAGE_SIZE}${searchParam}`)
+
       if (!res.ok) {
         throw new Error('Error al cargar paquetes')
       }
@@ -87,12 +92,31 @@ export default function PackagesPage() {
   }, [toast])
 
   useEffect(() => {
-    fetchPackages(page)
-  }, [fetchPackages, page])
+    fetchPackages(page, searchTerm)
+  }, [fetchPackages, page, searchTerm])
 
   const handlePageChange = (newPage: number) => {
     if (totalPages === 0 || newPage < 1 || (totalPages > 0 && newPage > totalPages) || newPage === page) return
     setPage(newPage)
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value)
+    if (value === '') {
+      setSearchTerm('')
+      setPage(1) // Reset to first page when clearing search
+    }
+  }
+
+  const handleSearchSubmit = () => {
+    setSearchTerm(search)
+    setPage(1) // Reset to first page when searching
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit()
+    }
   }
 
   const handleToggleActive = async (id: string, currentValue: boolean) => {
@@ -204,6 +228,38 @@ export default function PackagesPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {/* Search Section */}
+          <div className="p-6 border-b bg-muted/30">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar paquetes por título, destino o tipo..."
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="pl-10"
+                />
+              </div>
+              {search && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSearchChange('')}
+                  className="gap-2"
+                >
+                  Limpiar búsqueda
+                </Button>
+              )}
+            </div>
+            {searchTerm && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Resultados para: <span className="font-medium">"{searchTerm}"</span>
+              </p>
+            )}
+          </div>
+
           {packages.length === 0 ? (
             <div className="text-center py-16">
               <PackageIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />

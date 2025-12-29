@@ -17,9 +17,9 @@ export default async function PackagePage({ params }: { params: Promise<{ id: st
     _id: pkg._id.toString(),
     departureDate: pkg.departureDate?.toISOString(),
     formattedDepartureDate: pkg.departureDate?.toLocaleDateString('es-AR'),
-    departurePoints: (pkg.departurePoints || []).map((point) => ({
+    departurePoints: (pkg.departurePoints || []).map((point: any) => ({
       ...point,
-      _id: point._id.toString(),
+      _id: point._id?.toString() || point.toString(),
     })),
   } as any
 

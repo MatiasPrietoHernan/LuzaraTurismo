@@ -7,9 +7,19 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const page = Math.max(Number(searchParams.get('page')) || 1, 1)
   const limit = Math.max(Number(searchParams.get('limit')) || 10, 1)
+  const search = searchParams.get('search') || ''
 
-  const total = await Package.countDocuments()
-  const packages = await Package.find()
+  // Build search query
+  const searchQuery = search ? {
+    $or: [
+      { title: { $regex: search, $options: 'i' } },
+      { destination: { $regex: search, $options: 'i' } },
+      { type: { $regex: search, $options: 'i' } }
+    ]
+  } : {}
+
+  const total = await Package.countDocuments(searchQuery)
+  const packages = await Package.find(searchQuery)
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
